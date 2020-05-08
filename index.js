@@ -11,7 +11,28 @@ const db = {
 };
 
 app.get('/', (req, res) => {
-    res.send(db["egg"]);
+    if (req.query.ingredient === "yeast"){
+        setTimeout((function() {res.send(db[req.query.ingredient]);}), 2000);
+    }
+    else if (req.query.ingredient === "flour"){
+        setTimeout((function() {res.send(db[req.query.ingredient]);}), 3000);
+    }
+    else if (req.query.ingredient === "butter"){
+        setTimeout((function() {res.send(db[req.query.ingredient]);}), 1000);
+    }
+    else if (req.query.ingredient === "egg"){
+        setTimeout((function() {res.send(db[req.query.ingredient]);}), 5000);
+    }
+    else if (req.query.ingredient === "milk"){
+        setTimeout((function() {res.send(db[req.query.ingredient]);}), 1500);
+    }
+    else if (req.query.ingredient === "sugar"){
+        setTimeout((function() {res.send(db[req.query.ingredient]);}), 2500);
+    }
+    else {
+        setTimeout((function() {res.status(400);
+            res.send({message:"invalid ingredient"})}), 7000);
+    }
 });
 
 app.listen(8000, '0.0.0.0', () => {
