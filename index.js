@@ -49,6 +49,12 @@ app.get('/', (req, res) => {
     }
     else if (req.query.ingredient === "flour"){
         setTimeout((function() {res.send(db[req.query.ingredient]);}), 3000);
+        globalStats.record([
+            {
+                measure: LATENCY_MS,
+                value: 3000,
+            },
+        ]);
     }
     else if (req.query.ingredient === "butter"){
         setTimeout((function() {res.send(db[req.query.ingredient]);}), 1000);
