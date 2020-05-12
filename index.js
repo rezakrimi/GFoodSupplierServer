@@ -1,5 +1,32 @@
+const {globalStats, MeasureUnit, AggregationType} = require ('@opencensus/core');
+const {StackdriverStatsExporter} = require('@opencensus/exporter-stackdriver');
 const express = require('express');
 const app = express();
+
+const EXPORT_INTERVAL = 20;
+const LATENCY_MS = globalStats.createMeasureInt64(
+    'stack-doctor-metric',
+    MeasureUnit.MS,
+    'custom metric for Stack Doctor'
+);
+
+//create and register the view
+const lastValueView = globalStats.createView(
+    'stack_doctor_metric',
+    LATENCY_MS,
+    AggregationType.LAST_VALUE,
+    [],
+    'randomly generated value for stack doctor demo'
+);
+globalStats.registerView(lastValueView);
+
+const exporter = new StackdriverStatsExporter({
+    projectId: 'opentel-rezakarimi-starter',
+    peroid: EXPORT_INTERVAL * 1000,
+});
+
+globalStats.registerExporter(exporter);
+
 
 const db = {
     "yeast": ["vendorA", "vendorB"],
@@ -13,6 +40,12 @@ const db = {
 app.get('/', (req, res) => {
     if (req.query.ingredient === "yeast"){
         setTimeout((function() {res.send(db[req.query.ingredient]);}), 2000);
+        globalStats.record([
+            {
+                measure: LATENCY_MS,
+                value: 2000,
+            },
+        ]);
     }
     else if (req.query.ingredient === "flour"){
         setTimeout((function() {res.send(db[req.query.ingredient]);}), 3000);
@@ -36,5 +69,5 @@ app.get('/', (req, res) => {
 });
 
 app.listen(8000, '0.0.0.0', () => {
-    console.log('Example app listening on port 8000!');
+    console.log('Supplier app listening on port 8000!');
 });
