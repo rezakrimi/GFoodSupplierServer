@@ -2,6 +2,10 @@ const {globalStats, MeasureUnit, AggregationType} = require ('@opencensus/core')
 const {StackdriverStatsExporter} = require('@opencensus/exporter-stackdriver');
 const express = require('express');
 const app = express();
+const cors = require('cors');
+//remove for production
+app.use(cors());
+app.options('*', cors());
 
 const EXPORT_INTERVAL = 20;
 const LATENCY_MS = globalStats.createMeasureInt64(
@@ -123,6 +127,6 @@ app.get('/', (req, res) => {
     }
 });
 
-app.listen(8000, '0.0.0.0', () => {
+app.listen(8000, 'localhost', () => {
     console.log('Supplier app listening on port 8000!');
 });
