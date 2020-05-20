@@ -1,3 +1,7 @@
+const opentelemetry = require('@opentelemetry/api');
+const {NodeTracerProvider} = require('@opentelemetry/node');
+const {SimpleSpanProcessor} = require('@opentelemetry/tracing');
+const { TraceExporter } = require('@google-cloud/opentelemetry-cloud-trace-exporter');
 const {globalStats, MeasureUnit, AggregationType} = require ('@opencensus/core');
 const {StackdriverStatsExporter} = require('@opencensus/exporter-stackdriver');
 const express = require('express');
@@ -127,6 +131,6 @@ app.get('/', (req, res) => {
     }
 });
 
-app.listen(8000, 'localhost', () => {
+app.listen(8000, () => {
     console.log('Supplier app listening on port 8000!');
 });
