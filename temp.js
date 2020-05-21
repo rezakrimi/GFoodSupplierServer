@@ -15,61 +15,42 @@ app.options('*', cors());
 
 const projectId = 'opentel-rezakarimi-starter';
 
-// GOOGLE_APPLICATION_CREDENTIALS are expected by a dependency of this code
-// and not this code itself. Checking for existence here but not retaining (as not needed)
-console.log(projectId)
-if (!projectId) {
-    throw Error('Unable to proceed without a Project ID');
-}
+const exporter = new MetricExporter({projectId: projectId});
 
-const provider = new NodeTracerProvider();
 
-// Initialize the exporter
-const te = new TraceExporter({ projectId: projectId });
+// const provider = new BasicTracerProvider();
+// provider.addSpanProcessor(new SimpleSpanProcessor(tracer_exporter));
+// provider.addSpanProcessor(new SimpleSpanProcessor(new ConsoleSpanExporter()));
+// provider.register();
 
-// Configure the span processor to send spans to the exporter
-provider.addSpanProcessor(new SimpleSpanProcessor(te));
-provider.register();
-
-const me = new MetricExporter({ projectId: projectId });
-
-// Register the exporter
+const tracer = opentelemetry.trace.getTracer('example-basic-tracer-node');
 const meter = new MeterProvider({
-    exporter: me,
-    interval: 6000,
+  exporter,
+  interval: 60000,
 }).getMeter('example-prometheus');
 
-
-
-const counter = meter.createCounter('counting_requests', {
-    monotonic: true,
-    labelKeys: ['pid'],
-    description: 'Counts number of requests',
+// Monotonic counters can only be increased.
+const requestCount = meter.createCounter('request_count', {
+  monotonic: true,
+  labelKeys: ['pid'],
+  description: 'Counts the number of requests',
 });
 
-const error_count = meter.createCounter('error_count', {
-    monotonic: true,
-    labelKeys: ['pid'],
-    description: 'Counts the number of errors',
+// Monotonic counters can only be increased.
+const errorCount = meter.createCounter('Errors', {
+  monotonic: true,
+  labelKeys: ['pid'],
+  description: 'Counts the number of errors',
 });
 
-const latencyObserver = meter.createObserver('latency', {
-    monotonic: false,
-    labelKeys: ['pid', 'core'],
-    description: 'Example of a observer',
+const responseLatency = meter.createObserver("response_latency", {
+  monotonic: false,
+  labelKeys: ["pid"],
+  description: "Records latency of response"
 });
 
-const latency = new MetricObservable();
-let measured_latency = 0;
 
-function latency_reporter(){
-    return measured_latency;
-}
 
-latencyObserver.setCallback((observerResult) => {
-    observerResult.observe(latency_reporter, { pid: process.pid.toString(), core: '1' });
-    observerResult.observe(latency, { pid: process.pid.toString(), core: '2' });
-});
 
 const db = {
     "yeast": ["vendorA", "vendorB"],
@@ -80,70 +61,57 @@ const db = {
     "sugar": ["vendorB", "vendorD"]
 };
 
-const labels = { pid: process.pid.toString() };
+const labels = { pid: "WHAT" };
 
 app.get('/', (req, res) => {
-    counter.bind(labels).add(6000);
-    error_count.bind(labels).add(3000);
-    opentelemetry.trace.setGlobalTracerProvider(provider);
-    const tracer = opentelemetry.trace.getTracer('basic');
-    const span = tracer.startSpan('foo');
+    // opentelemetry.trace.setGlobalTracerProvider(provider);
+    // const tracer = opentelemetry.trace.getTracer('basic');
+    // const span = tracer.startSpan('foo');
+
+    requestCount.bind(labels).add(1);
+  meter.collect();
 
     // Set attributes to the span.
-    span.setAttribute('key', 'value');
+    // span.setAttribute('key', 'value');
 
     // Annotate our span to capture metadata about our operation
-    span.addEvent('invoking work');
+    // span.addEvent('invoking work');
 
     if (req.query.ingredient === "yeast") {
         setTimeout((function () {
             res.send(db[req.query.ingredient]);
-            span.end();
-            measured_latency = 2000;
-            latency.next(latency_reporter());
+            // span.end();
         }), 2000);
     }
     else if (req.query.ingredient === "flour") {
         setTimeout((function () {
             res.send(db[req.query.ingredient]);
-            measured_latency = 3000;
-            latency.next(latency_reporter());
         }), 3000);
     }
     else if (req.query.ingredient === "butter") {
         setTimeout((function () {
             res.send(db[req.query.ingredient]);
-            measured_latency = 1000;
-            latency.next(latency_reporter());
         }), 1000);
     }
     else if (req.query.ingredient === "egg") {
         setTimeout((function () {
             res.send(db[req.query.ingredient]);
-            measured_latency = 5000;
-            latency.next(latency_reporter());
         }), 5000);
     }
     else if (req.query.ingredient === "milk") {
         setTimeout((function () {
             res.send(db[req.query.ingredient]);
-            measured_latency = 1500;
-            latency.next(latency_reporter());
         }), 1500);
     }
     else if (req.query.ingredient === "sugar") {
         setTimeout((function () {
             res.send(db[req.query.ingredient]);
-            measured_latency = 2500;
-            latency.next(latency_reporter());
         }), 2500);
     }
     else {
         setTimeout((function () {
             res.status(400);
             res.send(db[req.query.ingredient]);
-            measured_latency = 7000;
-            latency.next(latency_reporter());
         }), 7000);
     }
 });
