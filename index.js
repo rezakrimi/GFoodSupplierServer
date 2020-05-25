@@ -30,6 +30,8 @@ const te = new TraceExporter({ projectId: projectId });
 // Configure the span processor to send spans to the exporter
 provider.addSpanProcessor(new SimpleSpanProcessor(te));
 provider.register();
+opentelemetry.trace.setGlobalTracerProvider(provider);
+const tracer = opentelemetry.trace.getTracer('basic');
 
 const me = new MetricExporter({ projectId: projectId });
 
@@ -40,8 +42,8 @@ const meter = new MeterProvider({
 }).getMeter('example-prometheus');
 
 
-
-const counter = meter.createCounter('counting_requests', {
+// creating metrics
+const request_count = meter.createCounter('counting_requests', {
     monotonic: true,
     labelKeys: ['pid'],
     description: 'Counts number of requests',
@@ -55,20 +57,14 @@ const error_count = meter.createCounter('error_count', {
 
 const latencyObserver = meter.createObserver('latency', {
     monotonic: false,
-    labelKeys: ['pid', 'core'],
+    labelKeys: ['pid'],
     description: 'Example of a observer',
 });
 
 const latency = new MetricObservable();
-let measured_latency = 0;
-
-function latency_reporter(){
-    return measured_latency;
-}
 
 latencyObserver.setCallback((observerResult) => {
-    observerResult.observe(latency_reporter, { pid: process.pid.toString(), core: '1' });
-    observerResult.observe(latency, { pid: process.pid.toString(), core: '2' });
+    observerResult.observe(latency, { pid: process.pid.toString() });
 });
 
 const db = {
@@ -83,15 +79,13 @@ const db = {
 const labels = { pid: process.pid.toString() };
 
 app.get('/', (req, res) => {
-    counter.bind(labels).add(6000);
+    request_count.bind(labels).add(1);
     error_count.bind(labels).add(3000);
-    opentelemetry.trace.setGlobalTracerProvider(provider);
-    const tracer = opentelemetry.trace.getTracer('basic');
-    const span = tracer.startSpan('foo');
-
+    
+    // setting up span for tracer
+    const span = tracer.startSpan('query latency');
     // Set attributes to the span.
     span.setAttribute('key', 'value');
-
     // Annotate our span to capture metadata about our operation
     span.addEvent('invoking work');
 
@@ -99,51 +93,50 @@ app.get('/', (req, res) => {
         setTimeout((function () {
             res.send(db[req.query.ingredient]);
             span.end();
-            measured_latency = 2000;
-            latency.next(latency_reporter());
+            latency.next(2000);
         }), 2000);
     }
     else if (req.query.ingredient === "flour") {
         setTimeout((function () {
             res.send(db[req.query.ingredient]);
-            measured_latency = 3000;
-            latency.next(latency_reporter());
+            span.end();
+            latency.next(3000);
         }), 3000);
     }
     else if (req.query.ingredient === "butter") {
         setTimeout((function () {
             res.send(db[req.query.ingredient]);
-            measured_latency = 1000;
-            latency.next(latency_reporter());
+            span.end();
+            latency.next(1000);
         }), 1000);
     }
     else if (req.query.ingredient === "egg") {
         setTimeout((function () {
             res.send(db[req.query.ingredient]);
-            measured_latency = 5000;
-            latency.next(latency_reporter());
+            span.end();
+            latency.next(5000);
         }), 5000);
     }
     else if (req.query.ingredient === "milk") {
         setTimeout((function () {
             res.send(db[req.query.ingredient]);
-            measured_latency = 1500;
-            latency.next(latency_reporter());
+            span.end();
+            latency.next(1500);
         }), 1500);
     }
     else if (req.query.ingredient === "sugar") {
         setTimeout((function () {
             res.send(db[req.query.ingredient]);
-            measured_latency = 2500;
-            latency.next(latency_reporter());
+            span.end();
+            latency.next(2500);
         }), 2500);
     }
     else {
         setTimeout((function () {
             res.status(400);
             res.send(db[req.query.ingredient]);
-            measured_latency = 7000;
-            latency.next(latency_reporter());
+            span.end();
+            latency.next(7000);
         }), 7000);
     }
 });
